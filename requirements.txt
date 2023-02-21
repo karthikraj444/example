@@ -10,3 +10,5 @@ numpy
 matplotlib
 boto3
 jupyterlab
+argparse
+Scikit-learn
