@@ -12,3 +12,4 @@ boto3
 jupyterlab
 argparse
 Scikit-learn
+mlflow
