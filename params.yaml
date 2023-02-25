@@ -19,8 +19,8 @@ estimators:
     params:
       criterion: 'gini'
       splitter: 'best'
-      max_depth: 3
-      min_samples_leaf: 5
+      max_depth: 7
+      min_samples_leaf: 10
 
 model_dir: models
 
@@ -30,3 +30,9 @@ reports :
 
 webapp_model_dir: prediction_service/model/model.joblib
 
+mlflow_config:
+  artifacts_dir: artifacts
+  experiment_name: DecissionTree 
+  run_name: mlops
+  registered_model_name: DecissionTreeClasifier
+  remote_server_uri: http://127.0.0.1:5000

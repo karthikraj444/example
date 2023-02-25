@@ -11,6 +11,9 @@ import joblib
 import json
 import numpy as np
 import os
+import mlflow
+from urllib.parse import urlparse
+
 
 def eval_metrics(actual,pred):
     rmse=np.sqrt(mean_squared_error(actual,pred))
@@ -40,15 +43,20 @@ def train_and_evaluate(config_path):
     test_y=test[target]
 
     ######
+    mlflow_config = config["mlflow_config"]
+    remote_server_uri = mlflow_config["remote_server_uri"]
+    mlflow.set_tracking_uri(remote_server_uri)
+    mlflow.set_experiment(mlflow_config["experiment_name"])
+    with mlflow.start_run(run_name=mlflow_config["run_name"]) as mlops_run:
 
 
-    lr=DecisionTreeClassifier(criterion = criterion,
-            splitter=splitter ,max_depth=max_depth, min_samples_leaf=min_samples_leaf,random_state=random_state)
-    lr.fit(train_x,train_y)
+         lr=DecisionTreeClassifier(criterion = criterion,
+             splitter=splitter ,max_depth=max_depth, min_samples_leaf=min_samples_leaf,random_state=random_state)
+         lr.fit(train_x,train_y)
 
-    predicted_qualities=lr.predict(test_x)
+         predicted_qualities=lr.predict(test_x)
 
-    (rmse,mae,r2)=eval_metrics(test_y,predicted_qualities)
+         (rmse,mae,r2)=eval_metrics(test_y,predicted_qualities)
 
     #print("RMSE:%s", rmse)
     #print("MAE:%s", mae)
@@ -57,29 +65,21 @@ def train_and_evaluate(config_path):
 
     ###store the data into json##
 
-    score_file=config["reports"]["scores"]
-    params_file=config["reports"]["params"]
+         mlflow.log_param("criterion",criterion)
+         mlflow.log_param("splitter",splitter)
+         mlflow.log_param("max_depth",max_depth)
+         mlflow.log_param("min_samples_leaf",min_samples_leaf)
+    
+         mlflow.log_metric("rmse",rmse)
+         mlflow.log_metric("mae",mae)
+         mlflow.log_metric("r2",r2)
 
-    with open(score_file,"w")as f:
-        scores={
-            "rmse":rmse,
-            "mae":mae,
-            "r2":r2
-        }
-        json.dump(scores,f,indent=4)
+         tracking_url_type_store=urlparse(mlflow.get_artifact_uri()).scheme
 
-    with open(params_file,"w")as f:
-        params={
-            "criterion":criterion,
-            "splitter":splitter,
-            "max_depth":max_depth,
-            "min_samples_leaf":min_samples_leaf
-        }
-        json.dump(params,f,indent=4)
-
-    os.makedirs(model_dir,exist_ok=True)
-    model_path=os.path.join(model_dir,"model.joblib")
-    joblib.dump(lr,model_path)
+         if tracking_url_type_store != "file":
+            mlflow.sklearn.log_model(lr,"model",registered_model_name=mlflow_config["registered_model_name"])
+         else:
+            mlflow.sklearn.load_model(lr,"model")
 
 
 
